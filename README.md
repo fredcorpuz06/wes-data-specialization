@@ -1,6 +1,6 @@
 # Data Analysis and Interpretation Specialization
 
-This repository contains the source files for the interactive courses under the "Data Analysis and Interpretation Specialization" hosted on [www.coursera.org](https://www.coursera.org/specializations/data-analysis)
+This repository contains the source files for the interactive courses by [Wesleyan University](https://www.wesleyan.edu/) under the "Data Analysis and Interpretation Specialization" hosted on [www.coursera.org](https://www.coursera.org/specializations/data-analysis)
 
 The 5 courses in this specialization:
 
