@@ -1,2 +1,8 @@
 .DS_Store
 .vscode/
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+nesarc_pds.csv
