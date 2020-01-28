@@ -1,13 +1,21 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Dec 14 16:26:46 2015
+
+@author: jrose01
+"""
+
+#from pandas import Series, DataFrame
 import pandas as pd
 import numpy as np
 import matplotlib.pylab as plt
 from sklearn.cross_validation import train_test_split
 from sklearn.linear_model import LassoLarsCV
  
-# Load the dataset
+#Load the dataset
 data = pd.read_csv("treeaddhealth.csv")
 
-# upper-case all DataFrame column names
+#upper-case all DataFrame column names
 data.columns = map(str.upper, data.columns)
 
 # Data Management
@@ -15,7 +23,7 @@ data_clean = data.dropna()
 recode1 = {1:1, 2:0}
 data_clean['MALE']= data_clean['BIO_SEX'].map(recode1)
 
-# select predictor variables and target variable as separate data sets  
+#select predictor variables and target variable as separate data sets  
 predvar= data_clean[['MALE','HISPANIC','WHITE','BLACK','NAMERICAN','ASIAN',
 'AGE','ALCEVR1','ALCPROBS1','MAREVER1','COCEVER1','INHEVER1','CIGAVAIL','DEP1',
 'ESTEEM1','VIOL1','PASSIST','DEVIANT1','GPA1','EXPEL1','FAMCONCT','PARACTV',

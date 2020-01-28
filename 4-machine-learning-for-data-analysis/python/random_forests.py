@@ -7,15 +7,13 @@ from sklearn.cross_validation import train_test_split
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import classification_report
 import sklearn.metrics
-
-
-# Feature Importance
+ # Feature Importance
 from sklearn import datasets
 from sklearn.ensemble import ExtraTreesClassifier
 
 os.chdir("C:\TREES")
 
-# Load the dataset
+#Load the dataset
 
 AH_data = pd.read_csv("tree_addhealth.csv")
 data_clean = AH_data.dropna()
@@ -23,7 +21,7 @@ data_clean = AH_data.dropna()
 data_clean.dtypes
 data_clean.describe()
 
-# Split into training and testing sets
+#Split into training and testing sets
 
 predictors = data_clean[['BIO_SEX','HISPANIC','WHITE','BLACK','NAMERICAN','ASIAN','age',
 'ALCEVR1','ALCPROBS1','marever1','cocever1','inhever1','cigavail','DEP1','ESTEEM1','VIOL1',
@@ -38,7 +36,7 @@ pred_test.shape
 tar_train.shape
 tar_test.shape
 
-# Build model on training data
+#Build model on training data
 from sklearn.ensemble import RandomForestClassifier
 
 classifier=RandomForestClassifier(n_estimators=25)
@@ -59,7 +57,7 @@ print(model.feature_importances_)
 
 """
 Running a different number of trees and see the effect
-of that on the accuracy of the prediction
+ of that on the accuracy of the prediction
 """
 
 trees=range(25)
@@ -73,3 +71,4 @@ for idx in range(len(trees)):
    
 plt.cla()
 plt.plot(trees, accuracy)
+
