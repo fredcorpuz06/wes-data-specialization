@@ -1,17 +1,18 @@
 library(tidyverse)
 library(caret) # machine learning
-# library(rpart)
+library(rpart) # decision trees
 library(rpart.plot) # visualize trees
 
 # Load dataset
-df <- read_csv("../data/treeaddhealth.csv") %>%
+df <- read_csv("tree_addhealth.csv") %>%
+    select(-id) %>%
     na.omit()
 
 summary(df)
 head(df)
 
 
-# Split into training and test
+# Split into train and test
 set.seed(1234)
 trainIndex <- createDataPartition(
     df$TREG1, p = 0.6,
@@ -19,20 +20,15 @@ trainIndex <- createDataPartition(
     times = 1
 )
 
-training <- df[trainIndex, ]
-testing <- df[-trainIndex, ]
+train <- df[trainIndex, ]
+test <- df[-trainIndex, ]
 
-# Build model on training data
-classifier <- train(
-    TREG1 ~ ., 
-    data = training,
-    method = 'rpart'
-)
+# Build model on train data
+classifier <- rpart(TREG1 ~ ., data = train, method = "class")
 
 # Predict and evaluate
-pred <- predict(classifier, newdata = testing)
-confusionMatrix(pred, testing$TREG1)
+pred <- predict(classifier, newdata = test, type = "class")
+confusionMatrix(pred, factor(test$TREG1))
 
 # Display decision tree
 rpart.plot(classifier)
-pdf("picture_out1.pdf") # save file

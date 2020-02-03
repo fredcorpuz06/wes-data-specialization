@@ -6,3 +6,5 @@
 .Ruserdata
 *.Rproj
 nesarc_pds.csv
+env/
+requirements.txt

@@ -1,10 +1,9 @@
 library(tidyverse)
 library(caret) # machine learning
-# library(rpart)
-library(rpart.plot) # visualize trees
+library(glmnet)
 
 # Load dataset
-df <- read_csv("../data/tree_addhealth.csv") %>%
+df <- read_csv("tree_addhealth.csv") %>%
     na.omit()
 
 summary(df)
@@ -41,8 +40,6 @@ confusionMatrix(pred, testing$TREG1)
 ##--------------------------------------------------------
 ## glmnet package
 ##--------------------------------------------------------
-library(glmnet)
-
 # predictor variables without the intercept
 # any categorical variables are converted to
 # dummy codes
