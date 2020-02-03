@@ -1,21 +1,13 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Dec 14 16:26:46 2015
-
-@author: jrose01
-"""
-
-#from pandas import Series, DataFrame
 import pandas as pd
 import numpy as np
 import matplotlib.pylab as plt
 from sklearn.cross_validation import train_test_split
 from sklearn.linear_model import LassoLarsCV
  
-#Load the dataset
+# Load the dataset
 data = pd.read_csv("treeaddhealth.csv")
 
-#upper-case all DataFrame column names
+# Upper-case all DataFrame column names
 data.columns = map(str.upper, data.columns)
 
 # Data Management
