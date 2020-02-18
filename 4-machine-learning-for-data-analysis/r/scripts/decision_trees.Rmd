@@ -1,0 +1,127 @@
+---
+title: "Decision Trees"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE)
+```
+
+Lets learn how to generate a decision tree. 
+
+### Import libraries 
+```{r}
+library(tidyverse) # data manipulation
+library(caret) # machine learning 
+library(rpart) # decision trees
+library(rpart.plot) # visualize trees
+
+```
+
+### Load the dataset
+I'm going to point my working directory to where my data files are located with
+`setwd()`. Then I'm going to view all the columns that are in the dataset. 
+
+```{r}
+setwd("C:/Users/fcorp/Desktop/repos/wes-data-specialization/data")
+df <- read_csv("tree_addhealth.csv") 
+colnames(df)
+````
+Next, I will pick out the variables that I need - everything except 
+`id`. Then, make sure that `TREG1` (our dependent variable) is a factor. Lastly,
+create a clean data frame that drops all NA's
+
+```{r}
+df <- df %>% 
+    select(-id) %>%
+    mutate(TREG1 = factor(TREG1)) %>%
+    na.omit()
+
+head(df)
+```
+
+
+
+
+### Split into train and test
+I will split my data into a training and testing set. The size ratio will be 
+60% for the training sample and 40% for the test sample, indicated by `p = 0.6` 
+in the `createDataPartition` function.
+```{r}
+set.seed(1234)
+trainIndex <- createDataPartition(df$TREG1, p = 0.6, list = FALSE, times = 1)
+
+train <- df[trainIndex, ]
+test <- df[-trainIndex, ]
+```
+Here I request the shape of these predictor and target training and test 
+samples. The training sample has 2,745 observations or rows, 60% of our original
+sample, and 24 explanatory variables. The test sample has 1,830 observations or
+rows. 40% of the original sample. And again 24 explanatory variables or columns.
+
+```{r}
+dim(train)
+dim(test)
+
+```
+
+
+### Build model on train data
+Once training and testing data sets have been created, we train our classifier 
+with `rpart`. We input the `train` dataset, pass the dependent variable `TREG1`
+and all the rest of the variables as the predictors `~ .` 
+```{r}
+classifier <- rpart(TREG1 ~ ., data = train, method = "class")
+```
+
+
+### Predict and evaluate
+
+Next we include the predict function
+where we predict for the test values and then call in the confusion matrix 
+function which we passed the target test sample to. This shows the correct and 
+incorrect classifications of our decision tree. The diagonal, 1,291 and 117,
+represent the number of true negative for regular smoking, and the number
+of true positives, respectively. The 211, on the bottom left,
+represents the number of false negatives. Classifying regular smokers
+as not regular smokers. And the 211 on the top right,
+the number of false positives, classifying a non regular
+smoker as a regular smoker. We can also look at the accuracy
+score which is approximately 0.77, which suggests that the decision
+tree model has classified 77% of the sample correctly as either
+regular or not regular smokers.
+```{r}
+pred <- predict(classifier, newdata = test, type = "class")
+confusionMatrix(pred, test$TREG1)
+```
+
+###  Display and interpret decision tree
+
+But what does our decision tree look like? Here is where the `rpart.plot` plays
+a role
+```{r}
+rpart.plot(classifier)
+```
+
+Here I show a tree with TREG1, my binary
+regular smoking variable, as the target. And both marijuana use and alcohol use as
+the predictor or explanatory variables. The resulting tree starts
+with the split on X[0], our first explanatory variable,
+marijuana use. If the value for
+marijuana use is less than 0.5, that is no marijuana use since my binary variable has
+values of zero equal no and one equal yes. Then the observations
+move to the left side of the split and include 2,068 of the
+2,745 individuals in the training sample. From this node, another split is
+made on alcohol use, variable X1, such that among those individuals with
+no marijuana use in the first split and also no alcohol use in the second split, 1,186 of them are not regular smokers,
+while only 33 are regular smokers. To the right of that split we see
+that among those positive for drinking alcohol,
+that is X1 greater than 0.5, 716 individuals are regular smokers,
+while 133 are not. Following down the right side of the tree,
+the two terminal leaves, or nodes, tell us that among individuals who
+have used marijuana and drank alcohol, 292 are not regular smokers while 289 are. While among those individuals who have
+used marijuana but have not drank alcohol, 70 are not regular smokers, while 26 are. By default, `rpart` uses the genie
+index as the splitting criteria for splitting internal nodes into
+additional internal or terminal ones.
