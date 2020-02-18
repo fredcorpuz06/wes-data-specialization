@@ -71,4 +71,3 @@ for idx in range(len(trees)):
    
 plt.cla()
 plt.plot(trees, accuracy)
-
