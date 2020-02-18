@@ -1,15 +1,13 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.tree import DecisionTreeClassifier, export_graphviz
 from sklearn.metrics import accuracy_score, confusion_matrix
-import pydotplus # for graphing
+from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier
+import matplotlib.pyplot as plt
 
 # Load the dataset
 df = pd.read_csv("data/tree_addhealth.csv")
-df.columns = map(str.upper, data.columns)
-df["MALE"] = df['BIO_SEX'] == 1
 df = df.dropna()
- 
+
 df.dtypes
 df.describe()
 
@@ -27,13 +25,14 @@ X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=.4, random_state=1234
 )
 
+
 print(X_train.shape)
 print(X_test.shape) 
 print(y_train.shape) 
 print(y_test.shape)
 
-# Build model on training data
-classifier = DecisionTreeClassifier()
+# Build random forest model on training data
+classifier = RandomForestClassifier(n_estimators=25)
 classifier.fit(X_train,y_train)
 
 pred = classifier.predict(X_test)
@@ -41,16 +40,23 @@ pred = classifier.predict(X_test)
 print(confusion_matrix(y_test,pred))
 print(accuracy_score(y_test, pred))
 
-# Displaying the decision tree
-# TODO: find different way to graph a tree
-tree_data = export_graphviz(classifier, out_file=None)
-graph = pydotplus.graph_from_dot_data(tree_data)
+# Fit an Extra Trees model to the data
+classifier2 = ExtraTreesClassifier()
+classifier2.fit(X_train,y_train)
 
-# Save decision tree graph as a png file 
-with open('tree_out.png', 'wb') as f:
-    f.write(graph.create_png())
+# Display the relative importance of each attribute
+print(classifier2.feature_importances_)
 
+# Running a different number of trees, observe accuracy
+n_trees = list(range(1, 26))
 
+def my_random_forest(n_tree):
+   classifier = RandomForestClassifier(n_estimators=n_tree)
+   classifier.fit(X_train, y_train)
+   pred = classifier.predict(X_test)
+   return accuracy_score(y_test, pred)
 
+accuracies = list(map(my_random_forest, n_trees))
 
-
+plt.plot(n_trees, accuracies)
+plt.show()
