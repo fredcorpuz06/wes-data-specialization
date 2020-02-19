@@ -1,16 +1,17 @@
-library(tidyverse)
-library(caret) # machine learning
-library(randomForest)
+library(tidyverse) # data manipulation
+library(caret) # machine learning 
+library(randomForest) # random forest
 
 # Load dataset
-df <- read_csv("../data/treeaddhealth.csv") %>%
+df <- read_csv("tree_addhealth.csv") %>%
+    select(-id) %>%
+    mutate(TREG1 = factor(TREG1)) %>%
     na.omit()
 
-summary(df)
 head(df)
 
 
-# Split into training and test
+# Split into train and test
 set.seed(1234)
 trainIndex <- createDataPartition(
     df$TREG1, p = 0.6,
@@ -18,48 +19,28 @@ trainIndex <- createDataPartition(
     times = 1
 )
 
-training <- df[trainIndex, ]
-testing <- df[-trainIndex, ]
+train <- df[trainIndex, ]
+test <- df[-trainIndex, ]
 
-# Build model on training data
-classifier <- train(
-    TREG1 ~ ., 
-    data = training,
-    method = 'rf',
-    ntree = 25
-)
+# Build random forest model on train data
+classifier <- randomForest(TREG1 ~ ., data = train, ntree = 25)
 
 # Predict and evaluate
-pred <- predict(classifier, newdata = testing)
-confusionMatrix(pred, testing$TREG1)
+pred <- predict(classifier, newdata = test, type = "class")
+confusionMatrix(pred, test$TREG1)
 
 # Display variable importance
 varImpPlot(classifier, type = 2, main = "Variable Importance") 
 
-# Running a different number of trees to see effect on accuracy
-# tc <- trainControl(method = "cv", number = )
-# cv_classifier <- train(
-#     TREG1 ~ ., 
-#     data = training,
-#     method = 'rf',
-#     trControl = tc
-#     tuneGrid = c()
-# )
-
+# Running a different number of trees, observe accuracy
 n_trees = 1:25
 
 my_random_forest <- function(n_tree){
-    classifier <- train(
-        TREG1 ~ ., 
-        data = training,
-        method = 'rf',
-        ntree = n_tree
-    )
-    
-    pred <- predict(classifier, newdata = testing)
-    results <- confusionMatrix(pred, testing$TREG1)
-    return(results$accuracy)
+    classifier <- randomForest(TREG1 ~ ., data = train, ntree = n_tree)
+    pred <- predict(classifier, newdata = test)
+    results <- confusionMatrix(pred, test$TREG1)
+    return(results$overall['Accuracy'])
 }
 
-accuracy <- map(n_trees, my_random_forest)
-plot(accuracy)
+accuracies <- map(n_trees, my_random_forest)
+plot(n_trees, accuracies)
