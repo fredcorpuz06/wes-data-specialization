@@ -1,10 +1,7 @@
 ---
-title: "R Notebook"
-output:
-  html_document:
-    df_print: paged
+title: "Random Forests"
+output: html_notebook
 ---
-
 
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(warning=FALSE, message=FALSE)
@@ -21,14 +18,16 @@ library(randomForest) # random forest
 ```
 
 ### Load the dataset
+
 I'm going to point my working directory to where my data files are located with
 `setwd()`. Then I'm going to view all the columns that are in the dataset. 
 
-```{r}
+```{r, echo=FALSE}
 setwd("C:/Users/fcorp/Desktop/repos/wes-data-specialization/data")
 df <- read_csv("tree_addhealth.csv") 
 colnames(df)
 ````
+
 Next, I will pick out the variables that I need - everything except 
 `id`. Then, make sure that `TREG1` (our dependent variable) is a factor. Lastly,
 create a clean data frame that drops all NA's
@@ -42,13 +41,12 @@ df <- df %>%
 head(df)
 ```
 
-
-
-
 ### Split into train and test
+
 I will split my data into a training and testing set. The size ratio will be 
 60% for the training sample and 40% for the test sample, indicated by `p = 0.6` 
-in the `createDataPartition` function.
+in `createDataPartition()`.
+
 ```{r}
 set.seed(1234)
 trainIndex <- createDataPartition(df$TREG1, p = 0.6, list = FALSE, times = 1)
@@ -56,10 +54,12 @@ trainIndex <- createDataPartition(df$TREG1, p = 0.6, list = FALSE, times = 1)
 train <- df[trainIndex, ]
 test <- df[-trainIndex, ]
 ```
+
 Here I request the shape of these predictor and target training and test 
-samples. The training sample has 2,745 observations or rows, 60% of our original
-sample, and 24 explanatory variables. The test sample has 1,830 observations or
-rows. 40% of the original sample. And again 24 explanatory variables or columns.
+samples. The training sample has `r dim(train)[1]` observations or rows, 60% of 
+our original sample, and `r dim(train)[2]` explanatory variables. The test sample
+has `r dim(test)[1]` observations or rows. 40% of the original sample. And again
+`r dim(test)[2]` explanatory variables or columns.
 
 ```{r}
 dim(train)
@@ -67,12 +67,13 @@ dim(test)
 
 ```
 
-
 ### Build random forest model on train data
 
 Once training and testing data sets have been created, we train our classifier 
-with `randomForest`, with `ntree = 25`. We input the `train` dataset, pass the dependent variable
-`TREG1` and all the rest of the variables as the predictors `~ .` 
+with `randomForest`, with `ntree = 25` (arbitrarily set 25 trees in our random
+forest). We input the `train` dataset, pass the dependent variable `TREG1` and 
+all the rest of the variables as the predictors 
+`.` 
 
 ```{r}
 classifier <- randomForest(TREG1 ~ ., data = train, ntree = 25)
@@ -80,19 +81,87 @@ classifier <- randomForest(TREG1 ~ ., data = train, ntree = 25)
 
 # Predict and evaluate
 
-Then, we go unto the prediction
-on the testator set. And we could also similar to
-decision tree code as for the confusion matrix and accuracy scores. For the confusion matrix,
-we see the true negatives and true positives on the diagonal. And the 207 and the 82 represent the false negatives and
-false positives, respectively. Notice that the overall accuracy for
-the forest is 0.84. So 84% of the individuals
-were classified correctly, as regular smokers, or
-not regular smokers. 
+### Load the dataset
+
+I'm going to point my working directory to where my data files are located with
+`setwd()`. Then I'm going to view all the columns that are in the dataset. 
+
+```{r, echo=FALSE}
+setwd("C:/Users/fcorp/Desktop/repos/wes-data-specialization/data")
+df <- read_csv("tree_addhealth.csv") 
+colnames(df)
+````
+
+Next, I will pick out the variables that I need - everything except 
+`id`. Then, make sure that `TREG1` (our dependent variable) is a factor. Lastly,
+create a clean data frame that drops all NA's
+
+```{r}
+df <- df %>% 
+    select(-id) %>%
+    mutate(TREG1 = factor(TREG1)) %>%
+    na.omit()
+
+head(df)
+```
+
+### Split into train and test
+
+I will split my data into a training and testing set. The size ratio will be 
+60% for the training sample and 40% for the test sample, indicated by `p = 0.6` 
+in `createDataPartition()`.
+
+```{r}
+set.seed(1234)
+trainIndex <- createDataPartition(df$TREG1, p = 0.6, list = FALSE, times = 1)
+
+train <- df[trainIndex, ]
+test <- df[-trainIndex, ]
+```
+
+Here I request the shape of these predictor and target training and test 
+samples. The training sample has `r dim(train)[1]` observations or rows, 60% of 
+our original sample, and `r dim(train)[2]` explanatory variables. The test sample
+has `r dim(test)[1]` observations or rows. 40% of the original sample. And again
+`r dim(test)[2]` explanatory variables or columns.
+
+```{r}
+dim(train)
+dim(test)
+
+```
+
+### Build model on train data
+
+Once training and testing data sets have been created, we train our classifier 
+with `rpart()`. We input the `train` dataset, pass the dependent variable `TREG1`
+and all the rest of the variables as the predictors with `.` 
 
 ```{r}
 pred <- predict(classifier, newdata = test, type = "class")
 confusionMatrix(pred, test$TREG1)
 ```
+
+```{r, include = FALSE}
+cm <- confusionMatrix(pred, test$TREG1)
+
+vals <- as.list(as.vector(cm$table))
+names(vals) <- c("tneg", "fneg", "fpos", "tpos")
+list2env(vals, envir = parent.frame())
+ac <- round(cm$overall['Accuracy'], 2)
+```
+
+This shows the correct and incorrect classifications of our random forest. 
+The diagonal, `r tneg` and `r tpos`,
+represent the number of true negative for regular smoking, and the number
+of true positives, respectively. The `r fneg`, on the bottom left,
+represents the number of false negatives. Classifying regular smokers
+as not regular smokers. And the `r fneg` on the top right,
+the number of false positives, classifying a non regular
+smoker as a regular smoker. We can also look at the accuracy
+score which is approximately `r ac`, which suggests that the decision
+tree model has classified `r ac*100`% of the sample correctly as either
+regular or not regular smokers.
 
 
 ### Display variable importance
@@ -100,38 +169,33 @@ confusionMatrix(pred, test$TREG1)
 Given that we don't interpret
 individual trees in a random forest, the most helpful information
 to be gotten from a forest is arguably the measured importance for
-each explanatory variable. Also called the features. Based on how many votes or splits each
-has produced in the 25 tree ensemble. To generate importance scores, we
-initialize the extra tree classifier, and then fit a model. Finally, we ask Python to print
-the feature importance scores calculated from the forest of trees that we've grown. The variables are listed in the order
-they've been named earlier in the code. Starting with gender, called BIO_SEX,
-and ending with parental presence. As we can see the variables with
-the highest important score at 0.13 is marijuana use. And the variable with the lowest important
-score is Asian ethnicity at .006. As you will recall,
-the correct classification rate for the random forest was 84%.
+each explanatory variable. Also called the features. Based on how many votes or 
+splits each has produced in the 25 tree ensemble. 
+
+To generate importance scores, we use `varImpPlot()`.
 
 ```{r}
 varImpPlot(classifier, type = 2, main = "Variable Importance") 
 ```
 
+As we can see the variables with the highest important score 
+(`MeanDecreaseGini`) at 0.13 is marijuana use, `marever1`. And the variable with the lowest important
+score is Asian ethnicity, `ASIAN`. As you will recall,
+the correct classification rate for the random forest was `r ac*100`%.
+
 ### Running a different number of trees, observe accuracy
+
 So were 25 trees actually needed to get
 this correct rate of classification? To determine what growing larger number of
 trees has brought us in terms of correct classification. We're going to use code that builds for
 us different numbers of trees, from one to 25, and provides the correct
-classification rate for each. This code will build for us random
-forest classifier from one to 25, and then finding the accuracy score for
-each of those trees from one to 25, and storing it in an array. This will give me 25
-different accuracy values. And we'll plot them as
-the number of trees increase. As you can see, with only one
-tree the accuracy is about 83%, and it climbs to only about 84% with
-successive trees that are grown giving us some confidence that it may
-be perfectly appropriate to interpret a single decision tree for this data. Given that it's accuracy is quite near
-that of successive trees in the forest.
+classification rate for each. 
+
+We create a function `my_random_forest()` that takes `n_tree` as an argument and
+returns the accuracy of a random forest trained and tested with the specified
+number of trees. 
 
 ```{r}
-n_trees = 1:25
-
 my_random_forest <- function(n_tree){
     classifier <- randomForest(TREG1 ~ ., data = train, ntree = n_tree)
     pred <- predict(classifier, newdata = test)
@@ -139,21 +203,49 @@ my_random_forest <- function(n_tree){
     return(results$overall['Accuracy'])
 }
 
+
+```
+
+Here is an example usage of a random forest trained and tested with 14 trees. 
+```{r}
+my_random_forest(14)
+```
+
+Now we will test all possible number of trees from 1-25 and plot the accuracy 
+scores
+```{r}
+n_trees = 1:25
 accuracies <- map(n_trees, my_random_forest)
 plot(n_trees, accuracies)
+
 ```
+
+```{r, include = FALSE}
+max_ac <- round(max(unlist(accuracies))*100, 2)
+```
+
+As you can see, with only one tree the accuracy is about `r max_ac`%, and it
+climbs to only about `r round(max_ac)`% with
+successive trees that are grown giving us some confidence that it may
+be perfectly appropriate to interpret a single decision tree for this data. 
+Given that it's accuracy is quite near
+that of successive trees in the forest.
+
+
 
 To summarize, like decision trees,
 random forests are a type of data mining algorithm that can select from
 among a large number of variables. Those that are most important
-in determining the target or response variable to be explained. Also light decision trees. The target variable in a random forest
-can be categorical or quantitative. And the group of explanatory variables or features can be categorical and
-quantitative in any combination. Unlike decision trees however, the results of random forests
+in determining the target or response variable to be explained. Also light 
+decision trees. The target variable in a random forest
+can be categorical or quantitative. And the group of explanatory variables or 
+features can be categorical and quantitative in any combination. 
+Unlike decision trees however, the results of random forests
 often generalize well to new data. Since the strongest signals are able to
-emerge through the growing of many trees. Further, small changes in the data do not
-impact the results of a random forest. In my opinion, the main weakness
+emerge through the growing of many trees. Further, small changes in the data do
+not impact the results of a random forest. In my opinion, the main weakness
 of random forests is simply that the results are less satisfying,
-since no trees are actually interpreted. Instead, the forest of trees is used to rank the importance of variables
-in predicting the target. Thus we get a sense of the most
-important predictive variables but not necessarily their
+since no trees are actually interpreted. Instead, the forest of trees is used to
+rank the importance of variables in predicting the target. Thus we get a sense
+of the most important predictive variables but not necessarily their
 relationships to one another.
