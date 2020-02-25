@@ -1,0 +1,103 @@
+---
+title: "Lasso Regression"
+output: html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(warning=FALSE, message=FALSE)
+```
+
+Lets learn how to run a lasso regression. 
+
+### Import libraries 
+
+```{r}
+library(tidyverse) # data manipulation
+library(caret) # machine learning 
+library(glmnet) # lasso regression
+```
+
+### Load the dataset
+
+I'm going to point my working directory to where my data files are located with
+`setwd()`. Then I'm going to view all the columns that are in the dataset. 
+
+```{r, echo=FALSE}
+setwd("C:/Users/fcorp/Desktop/repos/wes-data-specialization/data")
+df <- read_csv("tree_addhealth.csv") 
+colnames(df)
+````
+
+Next, I will pick out the variables that I need - everything except 
+`id`. Then, make sure that `SCHCONN1` (our dependent variable) is numeric. Lastly,
+create a clean data frame that drops all NA's
+
+```{r}
+df <- df %>% 
+    select(-id) %>%
+    mutate(SCHCONN1 = as.numeric(SCHCONN1)) %>%
+    na.omit()
+
+head(df)
+```
+
+### Split into train and test
+
+I will split my data into a training and testing set. The size ratio will be 
+60% for the training sample and 40% for the test sample, indicated by `p = 0.6` 
+in `createDataPartition()`.
+
+```{r}
+set.seed(1234)
+trainIndex <- createDataPartition(df$TREG1, p = 0.6, list = FALSE, times = 1)
+
+train <- df[trainIndex, ]
+test <- df[-trainIndex, ]
+```
+
+Here I request the shape of these predictor and target training and test 
+samples. The training sample has `r dim(train)[1]` observations or rows, 60% of 
+our original sample, and `r dim(train)[2]` explanatory variables. The test sample
+has `r dim(test)[1]` observations or rows. 40% of the original sample. And again
+`r dim(test)[2]` explanatory variables or columns.
+
+```{r}
+dim(train)
+dim(test)
+
+```
+
+### Center and scale 
+
+### Build model on train data
+
+Once training and testing data sets have been created, we train our classifier 
+with `train()`. We input the `train` dataset, pass the dependent variable 
+`SCHCONN1` and all the rest of the variables as the predictors with `.` 
+
+```{r}
+x <- model.matrix(SCHCONN1 ~ ., train)[,-1]
+y <- train$TREG1
+
+# fit model
+model.lasso <- glmnet(x, y, family="gaussian")
+
+```
+
+
+### Predict and evaluate
+
+Next we include `predict()` where we predict `SCHCONN1` for the values in `test` 
+and save those values into `pred`. Then, we call in `confusionMatrix()` to which
+we passed our prediction `pred` and the actual labels `test$TREG1`. 
+```{r}
+x <- model.matrix(TREG1 ~ ., test)[,-1]
+
+# predict class assuming prob cutoff of .5 
+pred <- predict(model.lasso, newx=x)
+rmse.lasso <- sqrt(mean((pred - test$SCHCONN1)^2))
+rmse.lasso
+```
+
