@@ -16,7 +16,7 @@ Lets learn how to run a k-means clustering.
 ```{r}
 library(tidyverse) # data manipulation
 library(caret) # machine learning 
-library(glmnet)
+library(glmnet) # lasso regression
 ```
 
 ### Load the dataset
@@ -27,6 +27,7 @@ I'm going to point my working directory to where my data files are located with
 ```{r, echo=FALSE}
 setwd("C:/Users/fcorp/Desktop/repos/wes-data-specialization/data")
 df <- read_csv("tree_addhealth.csv") 
+colnames(df) <- toupper(colnames(df))
 colnames(df)
 ````
 
@@ -35,13 +36,59 @@ Next, I will pick out the variables that I need - everything except
 create a clean data frame that drops all NA's
 
 ```{r}
+pred_vars <- c(
+  'ALCEVR1','MAREVER1','ALCPROBS1','DEVIANT1','VIOL1', 'DEP1','ESTEEM1',
+  'SCHCONN1','PARACTV', 'PARPRES','FAMCONCT'
+)
+dep_var <- c("GPA1")
 df <- df %>% 
-    select(-id) %>%
-    mutate(SCHCONN1 = as.numeric(SCHCONN1)) %>%
-    na.omit()
+  select(pred_vars, dep_var) %>% 
+  na.omit()
 
 head(df)
 ```
+
+### Center and scale 
+
+In lasso regression, the penalty term is not fair if the predictive variables
+are not on the same scale, meaning that not all the predictors
+get the same penalty. So I will standardize all the predictors
+to have a mean equal to zero and a standard deviation equal to one,
+including my binary predictors, which will put them all on the same scale. 
+
+Lets create `my_center_scale()` that transforms the variable to have a mean of 
+zero and a standard deviation of one, thus putting all the predictors on the 
+same scale.
+
+```{r}
+my_center_scale <- function(var, seed = 1234){
+  set.seed(seed)
+  centered <- var - mean(var)
+  scaled <- centered / sd(var)
+  
+  return(scaled)
+}
+
+# Test if our function works
+df$GPA1[1:20]
+gpa1_scaled <- my_center_scale(df$GPA1[1:20])
+gpa1_scaled
+mean(gpa1_scaled)
+sd(gpa1_scaled)
+```
+
+Now lets apply our function to all our predictors. 
+
+```{r}
+X <- df %>% select(-GPA1)
+y <- df$GPA1
+
+X <- map_df(X, my_center_scale)
+head(X)
+```
+
+
+
 
 ### Split into train and test
 
@@ -51,53 +98,52 @@ in `createDataPartition()`.
 
 ```{r}
 set.seed(1234)
-trainIndex <- createDataPartition(df$TREG1, p = 0.6, list = FALSE, times = 1)
+trainIndex <- createDataPartition(df$GPA1, p = 0.6, list = FALSE, times = 1)
 
-train <- df[trainIndex, ]
-test <- df[-trainIndex, ]
+X_train <- as.matrix(X[trainIndex, ]) # glmnet() expects a matrix input
+X_test <- as.matrix(X[-trainIndex, ]) 
+y_train <- y[trainIndex]
+y_test <- y[-trainIndex]
 ```
 
 Here I request the shape of these predictor and target training and test 
-samples. The training sample has `r dim(train)[1]` observations or rows, 60% of 
-our original sample, and `r dim(train)[2]` explanatory variables. The test sample
-has `r dim(test)[1]` observations or rows. 40% of the original sample. And again
-`r dim(test)[2]` explanatory variables or columns.
+samples. The training sample has `r dim(X_train)[1]` observations or rows, 60% of 
+our original sample, and `r dim(X_train)[2]` explanatory variables. The test sample
+has `r dim(X_test)[1]` observations or rows. 40% of the original sample. And again
+`r dim(X_test)[2]` explanatory variables or columns.
 
 ```{r}
-dim(train)
-dim(test)
-
+dim(X_train)
+dim(X_test)
+length(y_train)
+length(y_test)
 ```
 
-### Center and scale 
+
 
 ### Build model on train data
 
-Once training and testing data sets have been created, we train our classifier 
-with `train()`. We input the `train` dataset, pass the dependent variable 
-`SCHCONN1` and all the rest of the variables as the predictors with `.` 
+Cluster for 1-9 clusters
 
-```{r}
-x <- model.matrix(SCHCONN1 ~ ., train)[,-1]
-y <- train$TREG1
+### Determine optimal number of clusters
 
-# fit model
-model.lasso <- glmnet(x, y, family="gaussian")
+Plot ave. distance, use elbow method
 
-```
+
+### Interpret n-cluster solution
+merge cluster assignment with clustering variables to examine
+cluster variable means by cluster
 
 
 ### Predict and evaluate
 
-Next we include `predict()` where we predict `SCHCONN1` for the values in `test` 
+Next we include `predict()` where we predict `GPA1` for the values in `test` 
 and save those values into `pred`. Then, we call in `confusionMatrix()` to which
 we passed our prediction `pred` and the actual labels `test$TREG1`. 
 ```{r}
-x <- model.matrix(TREG1 ~ ., test)[,-1]
-
 # predict class assuming prob cutoff of .5 
-pred <- predict(model.lasso, newx=x)
-rmse.lasso <- sqrt(mean((pred - test$SCHCONN1)^2))
-rmse.lasso
+pred <- predict(regressor, newx=X_test)
+rmse <- sqrt(mean((pred - y_test)^2))
+rmse
 ```
 

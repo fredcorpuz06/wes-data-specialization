@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 # Load the dataset
 df = pd.read_csv("data/tree_addhealth.csv")
 df = df.dropna()
+df.columns = map(str.upper, df.columns)
 
 df.dtypes
 df.describe()
@@ -14,8 +15,8 @@ df.describe()
 # Split into training and testing sets
 # TODO: just unselect vars
 X = df[[
-    'BIO_SEX','HISPANIC','WHITE','BLACK','NAMERICAN','ASIAN','age','ALCEVR1',
-    'ALCPROBS1','marever1','cocever1','inhever1','cigavail','DEP1','ESTEEM1',
+    'BIO_SEX','HISPANIC','WHITE','BLACK','NAMERICAN','ASIAN','AGE','ALCEVR1',
+    'ALCPROBS1','MAREVER1','COCEVER1','INHEVER1','CIGAVAIL','DEP1','ESTEEM1',
     'VIOL1','PASSIST','DEVIANT1','SCHCONN1','GPA1','EXPEL1','FAMCONCT',
     'PARACTV', 'PARPRES'
 ]]

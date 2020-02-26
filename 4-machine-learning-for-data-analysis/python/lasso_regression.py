@@ -1,60 +1,48 @@
 import pandas as pd
-import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LassoLarsCV
- 
-# Load the dataset
-data = pd.read_csv("data/tree_addhealth.csv")
+from sklearn.preprocessing import scale
+from sklearn.metrics import mean_squared_error
 
-# Upper-case all DataFrame column names
-data.columns = map(str.upper, data.columns)
+# Load the dataset
+df = pd.read_csv("data/tree_addhealth.csv")
+df = df.dropna()
+df.columns = map(str.upper, df.columns)
+
+df.dtypes
+df.describe()
 
 # Data Management
-data_clean = data.dropna()
 recode1 = {1:1, 2:0}
-data_clean['MALE']= data_clean['BIO_SEX'].map(recode1)
+df['MALE']= df['BIO_SEX'].map(recode1)
 
-#select predictor variables and target variable as separate data sets  
-predvar= data_clean[['MALE','HISPANIC','WHITE','BLACK','NAMERICAN','ASIAN',
-'AGE','ALCEVR1','ALCPROBS1','MAREVER1','COCEVER1','INHEVER1','CIGAVAIL','DEP1',
-'ESTEEM1','VIOL1','PASSIST','DEVIANT1','GPA1','EXPEL1','FAMCONCT','PARACTV',
-'PARPRES']]
+# Select predictor variables and target variable as separate data sets  
+X = df[[
+    'MALE','HISPANIC','WHITE','BLACK','NAMERICAN','ASIAN','AGE','ALCEVR1',
+    'ALCPROBS1','MAREVER1','COCEVER1','INHEVER1','CIGAVAIL','DEP1','ESTEEM1',
+    'VIOL1','PASSIST','DEVIANT1','GPA1','EXPEL1','FAMCONCT','PARACTV','PARPRES'
+]]
 
-target = data_clean.SCHCONN1
- 
+y = df.SCHCONN1
+
 # standardize predictors to have mean=0 and sd=1
-predictors=predvar.copy()
-from sklearn import preprocessing
-predictors['MALE']=preprocessing.scale(predictors['MALE'].astype('float64'))
-predictors['HISPANIC']=preprocessing.scale(predictors['HISPANIC'].astype('float64'))
-predictors['WHITE']=preprocessing.scale(predictors['WHITE'].astype('float64'))
-predictors['NAMERICAN']=preprocessing.scale(predictors['NAMERICAN'].astype('float64'))
-predictors['ASIAN']=preprocessing.scale(predictors['ASIAN'].astype('float64'))
-predictors['AGE']=preprocessing.scale(predictors['AGE'].astype('float64'))
-predictors['ALCEVR1']=preprocessing.scale(predictors['ALCEVR1'].astype('float64'))
-predictors['ALCPROBS1']=preprocessing.scale(predictors['ALCPROBS1'].astype('float64'))
-predictors['MAREVER1']=preprocessing.scale(predictors['MAREVER1'].astype('float64'))
-predictors['COCEVER1']=preprocessing.scale(predictors['COCEVER1'].astype('float64'))
-predictors['INHEVER1']=preprocessing.scale(predictors['INHEVER1'].astype('float64'))
-predictors['CIGAVAIL']=preprocessing.scale(predictors['CIGAVAIL'].astype('float64'))
-predictors['DEP1']=preprocessing.scale(predictors['DEP1'].astype('float64'))
-predictors['ESTEEM1']=preprocessing.scale(predictors['ESTEEM1'].astype('float64'))
-predictors['VIOL1']=preprocessing.scale(predictors['VIOL1'].astype('float64'))
-predictors['PASSIST']=preprocessing.scale(predictors['PASSIST'].astype('float64'))
-predictors['DEVIANT1']=preprocessing.scale(predictors['DEVIANT1'].astype('float64'))
-predictors['GPA1']=preprocessing.scale(predictors['GPA1'].astype('float64'))
-predictors['EXPEL1']=preprocessing.scale(predictors['EXPEL1'].astype('float64'))
-predictors['FAMCONCT']=preprocessing.scale(predictors['FAMCONCT'].astype('float64'))
-predictors['PARACTV']=preprocessing.scale(predictors['PARACTV'].astype('float64'))
-predictors['PARPRES']=preprocessing.scale(predictors['PARPRES'].astype('float64'))
+X = X.apply(lambda x: scale(x.astype("float64")), axis=0)
 
 # split data into train and test sets
-pred_train, pred_test, tar_train, tar_test = train_test_split(predictors, target, 
-                                                              test_size=.3, random_state=123)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=.4, random_state=1234
+)
+
+
+print(X_train.shape)
+print(X_test.shape) 
+print(y_train.shape) 
+print(y_test.shape)
 
 # specify the lasso regression model
-model=LassoLarsCV(cv=10, precompute=False).fit(pred_train,tar_train)
+classifier = LassoLarsCV(cv=10, precompute=False)
+cli.fit(X_train, y_train)
 
 # print variable names and regression coefficients
 dict(zip(predictors.columns, model.coef_))
@@ -84,7 +72,6 @@ plt.title('Mean squared error on each fold')
          
 
 # MSE from training and test data
-from sklearn.metrics import mean_squared_error
 train_error = mean_squared_error(tar_train, model.predict(pred_train))
 test_error = mean_squared_error(tar_test, model.predict(pred_test))
 print ('training data MSE')

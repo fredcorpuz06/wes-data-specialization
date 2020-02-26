@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Jan 18 19:51:29 2016
-
-@author: jrose01
-"""
-
 from pandas import Series, DataFrame
 import pandas as pd
 import numpy as np
@@ -13,39 +6,38 @@ from sklearn.cross_validation import train_test_split
 from sklearn import preprocessing
 from sklearn.cluster import KMeans
 
-"""
-Data Management
-"""
-data = pd.read_csv("tree_addhealth.csv")
+# Load the dataset
+df = pd.read_csv("data/tree_addhealth.csv")
+df = df.dropna()
+df.columns = map(str.upper, df.columns)
 
-#upper-case all DataFrame column names
-data.columns = map(str.upper, data.columns)
+df.dtypes
+df.describe()
 
-# Data Management
+# Select predictor variables and target variable as separate data sets  
+X = df[[
+    'ALCEVR1','MAREVER1','ALCPROBS1','DEVIANT1','VIOL1', 'DEP1','ESTEEM1',
+    'SCHCONN1','PARACTV', 'PARPRES','FAMCONCT'
+]]
 
-data_clean = data.dropna()
+y = df.GPA1
 
-# subset clustering variables
-cluster=data_clean[['ALCEVR1','MAREVER1','ALCPROBS1','DEVIANT1','VIOL1',
-'DEP1','ESTEEM1','SCHCONN1','PARACTV', 'PARPRES','FAMCONCT']]
-cluster.describe()
+
 
 # standardize clustering variables to have mean=0 and sd=1
-clustervar=cluster.copy()
-clustervar['ALCEVR1']=preprocessing.scale(clustervar['ALCEVR1'].astype('float64'))
-clustervar['ALCPROBS1']=preprocessing.scale(clustervar['ALCPROBS1'].astype('float64'))
-clustervar['MAREVER1']=preprocessing.scale(clustervar['MAREVER1'].astype('float64'))
-clustervar['DEP1']=preprocessing.scale(clustervar['DEP1'].astype('float64'))
-clustervar['ESTEEM1']=preprocessing.scale(clustervar['ESTEEM1'].astype('float64'))
-clustervar['VIOL1']=preprocessing.scale(clustervar['VIOL1'].astype('float64'))
-clustervar['DEVIANT1']=preprocessing.scale(clustervar['DEVIANT1'].astype('float64'))
-clustervar['FAMCONCT']=preprocessing.scale(clustervar['FAMCONCT'].astype('float64'))
-clustervar['SCHCONN1']=preprocessing.scale(clustervar['SCHCONN1'].astype('float64'))
-clustervar['PARACTV']=preprocessing.scale(clustervar['PARACTV'].astype('float64'))
-clustervar['PARPRES']=preprocessing.scale(clustervar['PARPRES'].astype('float64'))
+X = X.apply(lambda x: scale(x.astype("float64")), axis=0)
 
 # split data into train and test sets
-clus_train, clus_test = train_test_split(clustervar, test_size=.3, random_state=123)
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=.4, random_state=1234
+)
+
+
+print(X_train.shape)
+print(X_test.shape) 
+print(y_train.shape) 
+print(y_test.shape)
+
 
 # k-means cluster analysis for 1-9 clusters                                                           
 from scipy.spatial.distance import cdist
