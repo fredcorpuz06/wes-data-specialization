@@ -27,18 +27,28 @@ I'm going to point my working directory to where my data files are located with
 ```{r, echo=FALSE}
 setwd("C:/Users/fcorp/Desktop/repos/wes-data-specialization/data")
 df <- read_csv("tree_addhealth.csv") 
+colnames(df) <- toupper(colnames(df)) # turn all column names to upper case
 colnames(df)
-````
+```
 
-Next, I will pick out the variables that I need - everything except 
-`id`. Then, make sure that `SCHCONN1` (our dependent variable) is numeric. Lastly,
+We will do some data management by turning `BIO_SEX` into `MALE` and making sure
+`SCHONN1` is numeric. 
+
+Next, I will pick out the variables that I need. The variable names of the 
+predictors we will use in our lasso regression are in `pred_vars`. The variable 
+that we are trying to predict is `SCHCONN1` which is in `dep_vars`. Lastly, we 
 create a clean data frame that drops all NA's
 
 ```{r}
+pred_vars <- c('MALE','HISPANIC','WHITE','BLACK','NAMERICAN','ASIAN','AGE','ALCEVR1',
+    'ALCPROBS1','MAREVER1','COCEVER1','INHEVER1','CIGAVAIL','DEP1','ESTEEM1',
+    'VIOL1','PASSIST','DEVIANT1','GPA1','EXPEL1','FAMCONCT','PARACTV','PARPRES'
+)
+dep_vars <- c("SCHCONN1")
 df <- df %>% 
   mutate(MALE = ifelse(BIO_SEX == 1, 1, 0),
          SCHCONN1 = as.numeric(SCHCONN1)) %>%
-  select(-id, -BIO_SEX) %>% 
+  select(pred_vars, dep_vars) %>%
   na.omit()
 
 head(df)
@@ -84,8 +94,6 @@ head(X)
 ```
 
 
-
-
 ### Split into train and test
 
 I will split my data into a training and testing set. The size ratio will be 
@@ -120,37 +128,140 @@ length(y_test)
 ### Build model on train data
 
 Once training and testing data sets have been created, we train our classifier 
-with `train()`. We input the `train` dataset, pass the dependent variable 
-`SCHCONN1` and all the rest of the variables as the predictors with `.` 
+with `glmnet()`. We input the `X_train` dataset, pass the dependent variable 
+`y_train`
 
+This algorithm starts with no predictors in the model and adds a predictor at each step. It first adds a predictor that is most correlated with the response variable and moves it towards least score estimate until there is another predictor. That is equally correlated
+with the model residual. It adds this predictor to the model and starts the least square estimation process over again with both variables. The LAR algorithm continues with
+this process until it has tested all the predictors. Parameter estimates at any step are shrunk and predictors with coefficients that have shrunk to zero are removed from the model
+and the process starts all over again. 
 
 ```{r}
 # alpha = 1 is lasso penalty
-# glmnet() will perform lasso regression w/o cross-validation
+regressor <- glmnet(X_train, y_train, family = "gaussian", alpha = 1) 
+```
+
+### Plot coefficient progression
+
+We can also create some plots so we can visualize some of the results. For example, we can plot the progression of the regression coefficients through the model selection process. 
+
+```{r}
+plot(regressor, main = "Regression Coefficients Progression for Lasso Paths")
+```
+
+This plot shows the relative importance
+of the predictor selected at any step of the selection process, how the reggression coefficients changed
+with the addition of a new predictor at each step, as well as the steps at
+which each variable entered the model. As we already know from looking at the
+list of the regression coefficients self esteem, the dark blue line,
+had the largest regression coefficient. It was therefore entered into the model
+first, followed by depression, the black line, at step two. In black ethnicity, the light blue line, at step three and so on. 
+
+Predictors with regression coefficients
+that do not have a value of zero are included in the selected model. Predictors with regression coefficients equal to zero means that the coefficients for
+those variables had shrunk to zero after applying the LASSO regression penalty, and
+were subsequently removed from the model. 
+
+So the results show that
+of the 23 variables, 18 were selected in the final model. If you remember, we standardized the values of our
+variables to be on the same scale. So we can also use the size of the
+regression coefficients to tell us which predictors are the strongest
+predictors of school connectedness. 
+
+For example, self-esteem and depression
+had the largest regression coefficients, and were most strongly associated
+with school connectedness, followed by black ethnicity and GPA. Depression and black ethnicity were negatively associated
+with school connectiveness, and self-esteem and GPA were positively
+associated with school connectiveness. 
+
+
+### K-Fold Cross-validation
+
+So what I am doing here is using
+k-fold cross-validation in which the first fold of the training
+data set is treated as a validation set, and the model is estimated
+using the remaining nine folds. At each step of the estimation process, when a new predictor is entered into the model, the mean-square error for the validation fold is calculated for each of the other nine folds and then averaged. 
+
+```{r}
+# alpha = 1 is lasso penalty
 set.seed(1234)
-regressor <- cv.glmnet(X_train, y_train, family = "gaussian", alpha = 1) 
-plot(regressor, xlab = "lambda", main = "Lasso")
+cv_regressor <- cv.glmnet(X_train, y_train, family = "gaussian", alpha = 1) 
 
 ```
 
+The model that produces the lowest mean-square error is the value `lambda.min`.
+This model is selected as the best model to validate using the test dataset. 
+
 ```{r}
-bestlam <- regressor$lambda.min
+bestlam <- cv_regressor$lambda.min
 bestlam
 
 ```
 
+
+```{r}
+coef(cv_regressor, s = bestlam)
+plot(cv_regressor)
+```
 
 
 
 ### Predict and evaluate
 
 Next we include `predict()` where we predict `SCHCONN1` for the values in `test` 
-and save those values into `pred`. Then, we call in `confusionMatrix()` to which
-we passed our prediction `pred` and the actual labels `test$TREG1`. 
+and save those values into `pred`. Then, we call in `compute_rmse()` and 
+`compute_r2()` on prediction `pred` and the actual labels `y_test`. 
+
 ```{r}
-# predict class assuming prob cutoff of .5 
-pred <- predict(regressor, newx=X_test)
-rmse.lasso <- sqrt(mean((pred - y_test)^2))
-rmse.lasso
+compute_rmse <- function(pred, actual){
+  square_error <- (pred - actual) ^ 2
+  return(sqrt(mean(square_error)))
+}
+
+pred_train <- predict(cv_regressor, newx = X_train)
+rmse_train <- compute_rmse(pred_train, y_train)
+rmse_train
 ```
+
+```{r}
+pred_test <- predict(cv_regressor, newx = X_test)
+rmse_test <- compute_rmse(pred_test, y_test)
+rmse_test
+```
+
+
+The root mean square error values were `r rmse_train` and `r rmse_test`. As expected, the selected model was less accurate in predicting school connectedness in the test data, but the test mean square error was pretty close to the training mean square error. This suggests that prediction accuracy was pretty stable across the two data sets. 
+
+
+```{r}
+compute_r2 <- function(pred, actual){
+  residual_sum_of_squares <- sum((pred - actual) ^ 2)
+  total_sum_of_squares <- sum((actual - mean(actual)) ^ 2)
+  return(1 - residual_sum_of_squares/total_sum_of_squares)
+}
+
+
+r2_train <- compute_r2(pred_train, y_train)
+r2_train
+r2_test <- compute_r2(pred_test, y_test)
+r2_test
+````
+
+The R-square values were `r r2_train` and `r r2_test`, indicating that the selected model
+explained `r round(r2_train*100)`% and `r round(r2_test*100)`% of the variance in school connectedness for the training and test sets, respectively.
+
+If we go back to our graph from
+the bias variance trade-off video that shows what happens to prediction
+error as a model becomes more complex by adding more predictors. We can see that prediction error decreases
+as more variables are added to the model, and consequently bias is lower. However, we can see from
+the results of our example, that the reduction in mean
+squares error became negligible. If we'd had even more predictors in our
+example to predict school connectiveness. We would likely see something
+similar to the graph's test curve, showing an increase in both bias and
+variance. The model that is selected
+as the best model, is the one that falls somewhere in here. It is a point where bias and variance and
+the test prediction error is lowest. If a model with fewer
+predictors is chosen, then the model is at risk
+of being under-chosen. If a model of more predictors is chosen, then the model is at risk
+of being over-fitted.
 

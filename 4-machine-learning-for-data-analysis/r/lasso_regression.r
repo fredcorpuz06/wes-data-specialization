@@ -4,22 +4,19 @@ library(glmnet)
 
 # Load dataset
 df <- read_csv("tree_addhealth.csv") %>%
+    select(-id) %>%
+    mutate(TREG1 = factor(TREG1)) %>%
     na.omit()
 
-summary(df)
 head(df)
 
 
-# Split into training and test
+# Split into train and test
 set.seed(1234)
-trainIndex <- createDataPartition(
-    df$TREG1, p = 0.6,
-    list = FALSE,
-    times = 1
-)
+trainIndex <- createDataPartition(df$TREG1, p = 0.6, list = FALSE, times = 1)
 
-training <- df[trainIndex, ]
-testing <- df[-trainIndex, ]
+train <- df[trainIndex, ]
+test <- df[-trainIndex, ]
 
 # Build model on training data
 tc <- trainControl(method = "cv", number = 10)
